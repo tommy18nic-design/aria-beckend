@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>ARIA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:#0a0a0f;color:#e8e4f0;height:100vh;display:flex;flex-direction:column}
+#h{padding:16px;background:#12121a;border-bottom:1px solid #1f1f2e}
+#h h1{font-size:20px;color:#c4a1ff}
+#h p{font-size:12px;color:#8a8494;margin-top:4px}
+#m{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.u{align-self:flex-end;background:#1c1a2e;border-radius:16px 16px 4px 16px;max-width:80%;padding:12px 16px;font-size:14px;line-height:1.5}
+.b{align-self:flex-start;background:#161622;border:1px solid #1f1f2e;border-radius:16px 16px 16px 4px;max-width:80%;padding:12px 16px;font-size:14px;line-height:1.5}
+.bn{font-size:11px;font-weight:700;color:#c4a1ff;margin-bottom:4px;letter-spacing:1px}
+.bl{background:none;border:none;color:#8a8494;cursor:pointer;font-size:12px;margin-top:6px;padding:4px 8px}
+.bl:hover{color:#c4a1ff}
+#bar{padding:12px 16px;background:#12121a;border-top:1px solid #1f1f2e}
+#r{display:flex;gap:8px;align-items:center;background:#0a0a0f;border-radius:14px;border:1px solid #1f1f2e;padding:4px 4px 4px 14px}
+#r.v{border-color:#ff6b8a;box-shadow:0 0 15px rgba(255,107,138,.2)}
+#i{flex:1;background:none;border:none;outline:none;color:#e8e4f0;font-size:14px;padding:8px 0;font-family:sans-serif}
+#i::placeholder{color:#8a8494}
+.c{width:40px;height:40px;border-radius:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+#mc{background:#1a1a26;color:#8a8494;transition:all 0.3s}
+#mc.on{background:#ff6b8a;color:#fff;box-shadow:0 0 20px rgba(255,107,138,0.4)}
+#mc.listening{background:#ff6b8a;color:#fff;animation:glow 1.5s ease-in-out infinite}
+#sd{background:#1a1a26;color:#8a8494}
+#sd.on{background:linear-gradient(135deg,#c4a1ff,#8b6cc4);color:#0a0a0f}
+#ht{text-align:center;margin-top:6px;font-size:12px;color:#ff6b8a;display:none}
+@keyframes glow{0%,100%{box-shadow:0 0 10px rgba(255,107,138,0.3)}50%{box-shadow:0 0 30px rgba(255,107,138,0.7)}}
+</style>
+</head>
+<body>
+<div id="h"><h1>ARIA</h1><p id="st">Online</p></div>
+<div id="m"></div>
+<div id="bar"><div id="r">
+<input id="i" placeholder="Scrivi o attiva la modalita vocale...">
+<button class="c" id="mc" onclick="toggleVoiceMode()">&#x1F3A4;</button>
+<button class="c" id="sd" onclick="se()">&#x2191;</button>
+</div><div id="ht"></div></div>
+<script>
+var API="https://cooperative-dedication-production.up.railway.app";
+var S="Tu sei ARIA e basta. Non menzionare mai altri AI. Rispondi solo in italiano, massimo 3 frasi. Parla come una persona vera. Sei amichevole e decisa.";
+var m=document.getElementById("m");
+var i=document.getElementById("i");
+var mc=document.getElementById("mc");
+var sd=document.getElementById("sd");
+var ht=document.getElementById("ht");
+var st=document.getElementById("st");
+var r=document.getElementById("r");
+var h=[];
+var rc=null;
+var sy=window.speechSynthesis;
+var silenceTimer=null;
+var voiceMode=false;
+var isListening=false;
+var isBusy=false;
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){
+rc=new SR();
+rc.lang="it-IT";
+rc.continuous=true;
+rc.interimResults=true;
+rc.onresult=function(e){
+var full="";
+for(var j=0;j<e.results.length;j++){full+=e.results[j][0].transcript;}
+i.value=full;
+if(e.results[e.results.length-1].isFinal){
+clearTimeout(silenceTimer);
+silenceTimer=setTimeout(function(){
+if(isListening&&i.value.trim()){
+stopListening();
+se();
+}
+},1800);
+}
+};
+rc.onend=function(){
+isListening=false;
+updateUI();
+};
+rc.onerror=function(){
+isListening=false;
+updateUI();
+};
+}
+function updateUI(){
+if(voiceMode){
+mc.className=isListening?"c listening":"c on";
+mc.innerHTML="&#x1F3A4;";
+r.className=isListening?"v":"";
+ht.style.display="block";
+if(isListening){
+ht.textContent="Ti ascolto...";
+st.textContent="Ti ascolto...";
+}else if(isBusy){
+ht.textContent="Sta pensando...";
+}else{
+ht.textContent="Modalita vocale attiva";
+st.textContent="Modalita vocale attiva";
+}
+}else{
+mc.className="c";
+mc.innerHTML="&#x1F3A4;";
+r.className="";
+ht.style.display="none";
+if(!isBusy){st.textContent="Online";}
+}
+}
+function toggleVoiceMode(){
+if(voiceMode){
+voiceMode=false;
+stopListening();
+sy.cancel();
+st.textContent="Online";
+}else{
+voiceMode=true;
+startListening();
+}
+updateUI();
+}
+function startListening(){
+if(!rc||isListening||isBusy){return;}
+sy.cancel();
+i.value="";
+try{
+rc.start();
+isListening=true;
+}catch(e){
+isListening=false;
+}
+updateUI();
+}
+function stopListening(){
+if(!rc){return;}
+clearTimeout(silenceTimer);
+try{rc.stop();}catch(e){}
+isListening=false;
+updateUI();
+}
+function getVoice(){
+var vs=sy.getVoices();
+var v=null;
+for(var x=0;x<vs.length;x++){
+if(vs[x].name.indexOf("Elsa")!==-1){v=vs[x];break;}
+}
+if(!v){
+for(var x=0;x<vs.length;x++){
+if(vs[x].lang==="it-IT"&&vs[x].name.indexOf("Cosimo")===-1){v=vs[x];break;}
+}
+}
+if(!v){
+for(var x=0;x<vs.length;x++){
+if(vs[x].lang.indexOf("it")===0){v=vs[x];break;}
+}
+}
+return v;
+}
+function sp(t){
+return new Promise(function(resolve){
+if(!sy){resolve();return;}
+sy.cancel();
+var u=new SpeechSynthesisUtterance(t);
+u.lang="it-IT";
+u.rate=0.9;
+u.pitch=1.2;
+u.volume=1;
+var v=getVoice();
+if(v){u.voice=v;}
+st.textContent="Sto parlando...";
+u.onend=function(){
+st.textContent="Online";
+resolve();
+};
+u.onerror=function(){
+st.textContent="Online";
+resolve();
+};
+sy.speak(u);
+});
+}
+function am(rl,tx){
+var d=document.createElement("div");
+if(rl==="user"){
+d.className="u";
+d.textContent=tx;
+}else{
+d.className="b";
+var btn=document.createElement("button");
+btn.className="bl";
+btn.textContent="Ascolta";
+btn.onclick=function(){sp(tx);};
+var head=document.createElement("div");
+head.className="bn";
+head.textContent="ARIA";
+var body=document.createElement("div");
+body.innerHTML=tx.replace(/\n/g,"<br>");
+d.appendChild(head);
+d.appendChild(body);
+d.appendChild(btn);
+}
+m.appendChild(d);
+m.scrollTop=m.scrollHeight;
+}
+am("assistant","Ciao, sono ARIA. Scrivi o tocca il microfono per la modalita vocale.");
+async function se(){
+var tx=i.value.trim();
+if(!tx||isBusy){return;}
+var wasVoice=voiceMode;
+am("user",tx);
+h.push({role:"user",content:tx});
+i.value="";
+sd.className="c";
+isBusy=true;
+st.textContent="Sta pensando...";
+updateUI();
+var dots=document.createElement("div");
+dots.className="b";
+dots.textContent="...";
+m.appendChild(dots);
+m.scrollTop=m.scrollHeight;
+try{
+var res=await fetch(API+"/api/claude",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:S,messages:h})
+});
+var data=await res.json();
+dots.remove();
+if(data.error){
+am("assistant","Errore: "+data.error);
+isBusy=false;
+updateUI();
+return;
+}
+var reply=data.text||"Nessuna risposta.";
+h.push({role:"assistant",content:reply});
+am("assistant",reply);
+if(wasVoice){
+await sp(reply);
+isBusy=false;
+updateUI();
+if(voiceMode){
+setTimeout(function(){startListening();},300);
+}
+}else{
+isBusy=false;
+updateUI();
+}
+}catch(e){
+dots.remove();
+am("assistant","Errore di connessione. Riprova.");
+isBusy=false;
+updateUI();
+if(wasVoice&&voiceMode){
+setTimeout(function(){startListening();},300);
+}
+}
+}
+i.addEventListener("keydown",function(e){
+if(e.key==="Enter"){e.preventDefault();se();}
+});
+i.addEventListener("input",function(){
+sd.className=i.value.trim()?"c on":"c";
+});
+sy.onvoiceschanged=function(){getVoice();};
+sy.getVoices();
+</script>
+</body>
+</html>
