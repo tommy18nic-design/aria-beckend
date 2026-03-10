@@ -7,6 +7,7 @@ const PERPLEXITY_KEY = process.env.PERPLEXITY_API_KEY || "";
 const CLAUDE_KEY = process.env.CLAUDE_API_KEY || "";
 app.use(cors());
 app.use(express.json({limit:"1mb"}));
+app.use(express.static("public"));
 app.get("/",function(req,res){res.json({status:"ARIA backend online"});});
 app.post("/api/claude",async function(req,res){
 if(!CLAUDE_KEY)return res.status(400).json({error:"CLAUDE_API_KEY non configurata"});
