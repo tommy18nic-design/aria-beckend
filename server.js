@@ -21,3 +21,4 @@ if(!PERPLEXITY_KEY)return res.status(400).json({error:"PERPLEXITY_API_KEY non co
 try{const r=await fetch("https://api.perplexity.ai/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+PERPLEXITY_KEY},body:JSON.stringify({model:"sonar",messages:req.body.messages})});const d=await r.json();if(d.error)return res.status(400).json({error:d.error.message});const t=d.choices?.[0]?.message?.content||"";res.json({text:t});}catch(e){res.status(500).json({error:e.message});}
 });
 app.listen(PORT,function(){console.log("ARIA backend on port "+PORT);});
+
